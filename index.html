@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Веб-игра: Безопасный интернет (с режимом учителя)</title>
+
+  <!-- QR генератор. Нужен интернет только для загрузки этой библиотеки -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <style>
+    :root{
+      --bg:#0f1221; --text:#f2f4ff; --muted:#b8bce6;
+      --accent:#7c5cff; --good:#3bd27d; --bad:#ff5c7a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 600px at 20% 10%, #1a1f3f, var(--bg));
+      color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .app{ width:min(1040px, 100%); }
+    header{
+      display:flex; gap:14px; align-items:flex-end; justify-content:space-between;
+      margin-bottom:14px; flex-wrap:wrap;
+    }
+    .title h1{ font-size:22px; margin:0 0 4px 0; }
+    .title p{ margin:0; color:var(--muted); font-size:14px; }
+
+    .stats{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill{
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:999px; padding:8px 12px;
+      font-size:13px; color:var(--muted);
+      display:flex; gap:8px; align-items:center; white-space:nowrap;
+    }
+    .pill strong{color:var(--text); font-weight:800}
+
+    .grid{ display:grid; grid-template-columns: 1.4fr .6fr; gap:14px; }
+    @media (max-width: 920px){ .grid{ grid-template-columns:1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px; padding:18px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.35);
+    }
+
+    .progress{
+      height:10px; background: rgba(255,255,255,.07);
+      border-radius:999px; overflow:hidden;
+      border:1px solid rgba(255,255,255,.09); margin-bottom:14px;
+    }
+    .bar{
+      height:100%; width:0%;
+      background: linear-gradient(90deg, var(--accent), #4fd5ff);
+      transition: width .25s ease;
+    }
+
+    .qno{ color:var(--muted); font-size:13px; margin-bottom:10px; }
+    .question{ font-size:18px; line-height:1.35; margin:0 0 14px 0; }
+
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    button{
+      border:0; cursor:pointer; border-radius:12px;
+      padding:12px 14px; font-weight:900; color:var(--text);
+      background: rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+      transition: transform .05s ease, background .2s ease;
+      user-select:none;
+    }
+    button:active{transform: translateY(1px)}
+    button.primary{
+      background: linear-gradient(90deg, var(--accent), #4fd5ff);
+      border-color: transparent; color:#0b0e1a;
+    }
+    button.truth{background: rgba(59,210,125,.12); border-color: rgba(59,210,125,.35)}
+    button.fake{background: rgba(255,92,122,.12); border-color: rgba(255,92,122,.35)}
+    button.warn{background: rgba(255,200,90,.10); border-color: rgba(255,200,90,.35)}
+    button:disabled{opacity:.55; cursor:not-allowed}
+
+    .feedback{
+      margin-top:12px; padding:12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      display:none; background: rgba(255,255,255,.05);
+    }
+    .feedback.show{display:block}
+    .feedback.good{border-color: rgba(59,210,125,.40); background: rgba(59,210,125,.10)}
+    .feedback.bad{border-color: rgba(255,92,122,.40); background: rgba(255,92,122,.10)}
+    .feedback .label{ font-weight:900; margin-bottom:6px; }
+
+    .hint{
+      color:var(--muted); font-size:14px;
+      border-top:1px solid rgba(255,255,255,.09);
+      margin-top:14px; padding-top:12px; display:none;
+    }
+    .hint.show{display:block}
+
+    .footer{
+      margin-top:12px; display:flex; justify-content:space-between;
+      gap:10px; flex-wrap:wrap; color:var(--muted); font-size:12px;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding:2px 7px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.25); color: var(--text); font-size:12px;
+    }
+
+    /* QR */
+    .qr-wrap{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    .qr-box{
+      width:168px; height:168px; border-radius:16px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      padding:10px; display:flex; align-items:center; justify-content:center;
+    }
+    label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    input{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.20);
+      color: var(--text); outline:none;
+    }
+    .small{ font-size:12px; color:var(--muted); line-height:1.4; }
+
+    /* End */
+    .end{ display:none; }
+    .end.show{display:block}
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      margin-top:6px; padding:10px 12px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      font-weight:900;
+    }
+
+    /* Modal */
+    .modalBack{
+      position:fixed; inset:0; background: rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center; padding:18px;
+    }
+    .modalBack.show{display:flex}
+    .modal{
+      width:min(920px, 100%); max-height: 88vh; overflow:auto;
+      border-radius:16px; padding:16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 16px 60px rgba(0,0,0,.5);
+    }
+    .modal h3{ margin:0 0 10px 0; }
+    .table{
+      width:100%; border-collapse: collapse; margin-top:10px;
+      font-size:13px;
+    }
+    .table th, .table td{
+      border-bottom:1px solid rgba(255,255,255,.10);
+      padding:10px 8px; vertical-align:top;
+    }
+    .table th{ text-align:left; color:var(--muted); font-weight:900; }
+    .tag{
+      display:inline-flex; padding:2px 8px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      font-weight:900; font-size:12px;
+    }
+    .tag.good{ border-color: rgba(59,210,125,.35); background: rgba(59,210,125,.10); }
+    .tag.bad{ border-color: rgba(255,92,122,.35); background: rgba(255,92,122,.10); }
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <div class="title">
+      <h1>Веб-игра «Безопасный интернет»</h1>
+      <p>Тема 1 • 8–11 классы • QR для запуска + Режим учителя (ответы и статистика)</p>
+    </div>
+    <div class="stats">
+      <div class="pill">Вопрос: <strong id="statQ">1/10</strong></div>
+      <div class="pill">Счёт: <strong id="statScore">0</strong></div>
+      <button class="warn" id="btnTeacher">Режим учителя</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- GAME -->
+    <div class="card" id="gameCard">
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="qno" id="qno">Вопрос 1 из 10</div>
+      <p class="question" id="question">Загрузка…</p>
+
+      <div class="controls">
+        <button class="truth" id="btnTruth">Правда</button>
+        <button class="fake" id="btnFake">Фейк</button>
+        <button id="btnSkip">Пропустить</button>
+      </div>
+
+      <div class="feedback" id="feedback">
+        <div class="label" id="fbLabel"></div>
+        <div id="fbText"></div>
+      </div>
+
+      <div class="hint" id="hint">
+        <strong>Подсказка-правило:</strong> <span id="hintText"></span>
+      </div>
+
+      <div class="controls" style="justify-content:flex-end; margin-top:14px;">
+        <button class="primary" id="btnNext" disabled>Дальше →</button>
+      </div>
+
+      <div class="footer">
+        <div>Клавиши: <span class="kbd">T</span> правда, <span class="kbd">F</span> фейк, <span class="kbd">N</span> дальше</div>
+        <div>Статистика сохраняется на этом устройстве</div>
+      </div>
+    </div>
+
+    <!-- QR -->
+    <div class="card">
+      <h3 style="margin:0 0 10px 0">📱 QR-код на запуск</h3>
+
+      <label for="qrUrl">Ссылка для QR (вставь ссылку, где игра размещена)</label>
+      <input id="qrUrl" type="text" placeholder="Например: https://xxxxx.netlify.app/" />
+
+      <div class="qr-wrap" style="margin-top:10px">
+        <div class="qr-box"><div id="qrcode"></div></div>
+        <div style="flex:1 1 220px">
+          <div class="small">
+            <div style="font-weight:900; margin-bottom:6px;">Чтобы QR работал на телефонах:</div>
+            <ul style="margin:0; padding-left:18px">
+              <li>Ссылка должна начинаться с <b>http://</b> или <b>https://</b></li>
+              <li><b>file://</b> — это путь к файлу на вашем устройстве, у учеников его нет</li>
+            </ul>
+          </div>
+          <div class="controls" style="margin-top:10px">
+            <button id="btnCopyLink">Скопировать ссылку</button>
+            <button class="primary" id="btnRegenQR">Обновить QR</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top:10px">
+        Если QR не рисуется — значит на устройстве нет интернета для загрузки библиотеки QR.
+        Тогда просто раздай ученикам ссылку.
+      </div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div class="card end" id="endCard" style="margin-top:14px">
+    <div class="end show">
+      <div class="badge" id="resultBadge">Результат</div>
+      <h2 style="margin:10px 0 6px 0;">Игра завершена!</h2>
+      <p style="margin:0; color:var(--muted)">
+        Учитель может открыть “Режим учителя” и увидеть правильные ответы + статистику по вопросам.
+      </p>
+      <div class="controls" style="margin-top:12px">
+        <button class="primary" id="btnRestart">Сыграть ещё раз</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER MODAL -->
+<div class="modalBack" id="modalBack" aria-hidden="true">
+  <div class="modal">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <h3>👩‍🏫 Режим учителя</h3>
+      <div class="controls" style="margin:0">
+        <button id="btnExport">Экспорт CSV</button>
+        <button id="btnResetStats" class="warn">Сброс статистики</button>
+        <button class="primary" id="btnCloseModal">Закрыть</button>
+      </div>
+    </div>
+
+    <div id="teacherGate" style="margin-top:10px">
+      <div class="small" style="margin-bottom:8px">
+        Введите код доступа. (Можно поменять в коде: <b>TEACHER_PIN</b>)
+      </div>
+      <div class="controls">
+        <input id="pinInput" type="password" placeholder="Код (например 2026)" style="max-width:260px" />
+        <button class="primary" id="btnPinOk">Войти</button>
+      </div>
+      <div class="small" id="pinMsg" style="margin-top:8px"></div>
+    </div>
+
+    <div id="teacherPanel" style="display:none; margin-top:10px">
+      <div class="small">
+        Здесь: правильные ответы, объяснения, и статистика (верно/неверно/пропуск) по каждому вопросу на этом устройстве.
+      </div>
+      <table class="table" id="teacherTable"></table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== Настройки учителя ======
+  const TEACHER_PIN = "2026";              // <-- поменяй, если хочешь
+  const STATS_KEY = "safe_internet_stats_v1"; // локальное хранилище для статистики
+
+  // ====== Вопросы (Тема 1: Безопасный интернет) ======
+  const questions = [
+    { text:"Если письмо/сообщение требует «СРОЧНО перейти по ссылке и подтвердить пароль», это обычно признак фишинга.",
+      answer:true,
+      explain:"Мошенники давят срочностью и просят перейти по ссылке/ввести данные. Настоящие сервисы редко просят пароль через письма.",
+      hint:"Срочность + ссылка + просьба о данных = высокий риск." },
+    { text:"Можно отправлять незнакомцам фото документа, если они обещают «подарок/приз/выплату».",
+      answer:false,
+      explain:"Это частая схема мошенничества: выманивают ИИН, паспорт, фото карты. Документы никому не отправляем.",
+      hint:"Документы и ИИН — только официальным организациям и по защищённым каналам." },
+    { text:"HTTPS (замочек) означает, что сайт честный на 100%.",
+      answer:false,
+      explain:"HTTPS шифрует соединение, но мошеннические сайты тоже могут иметь HTTPS. Проверяйте адрес и источник.",
+      hint:"HTTPS — про шифрование, а не про честность." },
+    { text:"Двухфакторная аутентификация (2FA) повышает защиту аккаунта даже при утечке пароля.",
+      answer:true,
+      explain:"2FA добавляет второй шаг: код/приложение. Одного пароля недостаточно, чтобы войти.",
+      hint:"2FA — второй замок на двери." },
+    { text:"Одинаковый сложный пароль для всех аккаунтов — нормально.",
+      answer:false,
+      explain:"Если один сервис взломают, пострадают все аккаунты. Нужны разные пароли или менеджер паролей.",
+      hint:"Один пароль на всё = один ключ от всех дверей." },
+    { text:"Если вам пишут «это твой учитель/директор, срочно переведи деньги», нужно сначала проверить по другому каналу.",
+      answer:true,
+      explain:"Мошенники подделывают аккаунты. Всегда перезвоните/спросите лично/через официальный чат.",
+      hint:"Проверка по второму каналу — обязательна." },
+    { text:"Лишние разрешения у приложения (контакты/микрофон без причины) — повод насторожиться.",
+      answer:true,
+      explain:"Разрешения должны соответствовать функциям. Лишние доступы = возможный сбор данных.",
+      hint:"Дай приложению только то, что нужно." },
+    { text:"Если в новости нет источников и её опубликовал один неизвестный канал, лучше поверить, чтобы «быть в курсе».",
+      answer:false,
+      explain:"Это риск. Проверяйте минимум по 2–3 надёжным источникам, ищите первоисточник.",
+      hint:"Правило: 2–3 независимых источника." },
+    { text:"Перед публикацией фото/видео стоит проверить, нет ли на фоне личной информации (номер, документы, адрес).",
+      answer:true,
+      explain:"На фото может быть виден адрес, документы, экран телефона. Это риск утечки данных.",
+      hint:"Думай, что «случайно» видно на кадре." },
+    { text:"Если вы сомневаетесь в ссылке, безопаснее открыть её сразу — «ну вдруг там важно».",
+      answer:false,
+      explain:"Лучше не открывать. Проверьте адрес, спросите отправителя, используйте официальные сайты и поиск.",
+      hint:"Сомневаешься — не кликай." }
+  ];
+
+  // ====== Helpers ======
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ====== Stats (локально на устройстве) ======
+  function loadStats(){
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return questions.map(() => ({ correct:0, wrong:0, skip:0 }));
+    try{
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length !== questions.length) throw new Error("bad");
+      return parsed;
+    }catch{
+      return questions.map(() => ({ correct:0, wrong:0, skip:0 }));
+    }
+  }
+  function saveStats(stats){ localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+
+  let stats = loadStats();
+
+  // ====== Game state ======
+  let idx = 0;
+  let score = 0;
+  let locked = false;
+
+  // ====== UI refs ======
+  const statQ = $("statQ"), statScore = $("statScore"), qno = $("qno"), question = $("question"), bar = $("bar");
+  const btnTruth = $("btnTruth"), btnFake = $("btnFake"), btnSkip = $("btnSkip"), btnNext = $("btnNext");
+  const feedback = $("feedback"), fbLabel = $("fbLabel"), fbText = $("fbText");
+  const hint = $("hint"), hintText = $("hintText");
+  const gameCard = $("gameCard"), endCard = $("endCard"), resultBadge = $("resultBadge"), btnRestart = $("btnRestart");
+
+  // ====== Render ======
+  function render(){
+    const total = questions.length;
+    const q = questions[idx];
+
+    statQ.textContent = ${idx+1}/${total};
+    qno.textContent = Вопрос ${idx+1} из ${total};
+    question.textContent = q.text;
+    bar.style.width = ${(idx / total) * 100}%;
+
+    feedback.className = "feedback";
+    feedback.style.display = "none";
+    hint.className = "hint";
+    hintText.textContent = q.hint || "";
+
+    locked = false;
+
+    btnTruth.disabled = false;
+    btnFake.disabled = false;
+    btnSkip.disabled = false;
+    btnNext.disabled = true;
+  }
+
+  function lockButtons(){
+    btnTruth.disabled = true;
+    btnFake.disabled = true;
+    btnSkip.disabled = true;
+    btnNext.disabled = false;
+  }
+
+  function answer(userAns){
+    if (locked) return;
+    locked = true;
+
+    const q = questions[idx];
+    const correct = (userAns === q.answer);
+
+    if (correct) score += 1;
+    statScore.textContent = String(score);
+
+    // stats
+    if (correct) stats[idx].correct += 1; else stats[idx].wrong += 1;
+    saveStats(stats);
+
+    feedback.style.display = "block";
+    feedback.classList.add("show", correct ? "good" : "bad");
+    fbLabel.textContent = correct ? "Верно ✅" : "Неверно ❌";
+    fbText.innerHTML = `
+      <div><strong>Правильный ответ:</strong> ${q.answer ? "Правда" : "Фейк"}</div>
+      <div style="margin-top:6px">${q.explain}</div>
+    `;
+
+    hint.classList.add("show");
+    lockButtons();
+    bar.style.width = ${((idx + 1) / questions.length) * 100}%;
+  }
+
+  function skip(){
+    if (locked) return;
+    locked = true;
+
+    stats[idx].skip += 1;
+    saveStats(stats);
+
+    feedback.style.display = "block";
+    feedback.classList.add("show");
+    fbLabel.textContent = "Пропущено ⏭️";
+    fbText.innerHTML = <div>${questions[idx].explain}</div>;
+    hint.classList.add("show");
+
+    lockButtons();
+    bar.style.width = ${((idx + 1) / questions.length) * 100}%;
+  }
+
+  function next(){
+    if (idx < questions.length - 1){
+      idx += 1;
+      render();
+    } else {
+      finish();
+    }
+  }
+
+  function finish(){
+    gameCard.style.display = "none";
+    endCard.classList.add("show");
+    const total = questions.length;
+    const pct = Math.round((score/total)*100);
+
+    let level="Начальный";
+    if (pct >= 80) level="Продвинутый";
+    else if (pct >= 60) level="Уверенный";
+
+    resultBadge.textContent = Результат: ${score}/${total} (${pct}%) • Уровень: ${level};
+  }
+
+  function restart(){
+    idx = 0; score = 0; locked = false;
+    statScore.textContent = "0";
+    endCard.classList.remove("show");
+    gameCard.style.display = "block";
+    render();
+  }
+
+  btnTruth.addEventListener("click", () => answer(true));
+  btnFake.addEventListener("click", () => answer(false));
+  btnSkip.addEventListener("click", skip);
+  btnNext.addEventListener("click", next);
+  btnRestart.addEventListener("click", restart);
+
+  document.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (gameCard.style.display !== "none"){
+      if (k === "t") answer(true);
+      if (k === "f") answer(false);
+      if (k === "n" && !btnNext.disabled) next();
+    }
+  });
+
+  // ====== QR ======
+  const qrUrl = $("qrUrl"), btnCopyLink = $("btnCopyLink"), btnRegenQR = $("btnRegenQR"), qrNode = $("qrcode");
+  function regenQR(){
+    const url = (qrUrl.value || "").trim();
+    qrNode.innerHTML = "";
+    if (!url){ qrNode.textContent = "Нет ссылки"; return; }
+
+    if (typeof QRCode === "undefined"){
+      qrNode.innerHTML = `<div class="small">QR-библиотека не загрузилась (нет интернета).<br>Ссылка:</div>
+                          <div style="word-break:break-all; font-size:12px; margin-top:6px">${escapeHtml(url)}</div>`;
+      return;
+    }
+    new QRCode(qrNode, { text:url, width:148, height:148, correctLevel:QRCode.CorrectLevel.M });
+  }
+
+  qrUrl.addEventListener("input", regenQR);
+  btnRegenQR.addEventListener("click", regenQR);
+  btnCopyLink.addEventListener("click", async () => {
+    const url = (qrUrl.value || "").trim();
+    if (!url) return alert("Сначала вставьте ссылку.");
+    try{ await navigator.clipboard.writeText(url); alert("Ссылка скопирована ✅"); }
+    catch{ alert("Не удалось скопировать. Скопируйте вручную."); }
+  });
+
+  // ====== Teacher mode ======
+  const btnTeacher = $("btnTeacher");
+  const modalBack = $("modalBack");
+  const btnCloseModal = $("btnCloseModal");
+  const teacherGate = $("teacherGate");
+  const teacherPanel = $("teacherPanel");
+  const pinInput = $("pinInput");
+  const btnPinOk = $("btnPinOk");
+  const pinMsg = $("pinMsg");
+  const teacherTable = $("teacherTable");
+  const btnResetStats = $("btnResetStats");
+  const btnExport = $("btnExport");
+
+  function openTeacher(){
+    modalBack.classList.add("show");
+    modalBack.setAttribute("aria-hidden","false");
+    // gate reset
+    teacherGate.style.display = "block";
+    teacherPanel.style.display = "none";
+    pinInput.value = "";
+    pinMsg.textContent = "";
+    pinInput.focus();
+  }
+
+  function closeTeacher(){
+    modalBack.classList.remove("show");
+    modalBack.setAttribute("aria-hidden","true");
+  }
+
+  function buildTeacherTable(){
+    // обновим stats из localStorage на случай изменений
+    stats = loadStats();
+
+    const head = `
+      <tr>
+        <th>#</th>
+        <th>Вопрос</th>
+        <th>Ответ</th>
+        <th>Статистика</th>
+        <th>Объяснение</th>
+      </tr>
+    `;
+    const rows = questions.map((q, i) => {
+      const s = stats[i] || {correct:0, wrong:0, skip:0};
+      const ans = q.answer ? <span class="tag good">Правда</span> : <span class="tag bad">Фейк</span>;
+      const st = ✅ ${s.correct} &nbsp; ❌ ${s.wrong} &nbsp; ⏭️ ${s.skip};
+      return `
+        <tr>
+          <td>${i+1}</td>
+          <td>${escapeHtml(q.text)}</td>
+          <td>${ans}</td>
+          <td>${st}</td>
+          <td>${escapeHtml(q.explain)}</td>
+        </tr>
+      `;
+    }).join("");
+
+    teacherTable.innerHTML = head + rows;
+  }
+
+  function teacherLogin(){
+    const pin = (pinInput.value || "").trim();
+    if (pin === TEACHER_PIN){
+      teacherGate.style.display = "none";
+      teacherPanel.style.display = "block";
+      buildTeacherTable();
+    } else {
+      pinMsg.textContent = "Неверный код. Попробуйте ещё раз.";
+      pinMsg.style.color = "rgba(255,92,122,.95)";
+      pinInput.focus();
+    }
+  }
+
+  function resetStats(){
+    if (!confirm("Сбросить статистику на этом устройстве?")) return;
+    stats = questions.map(() => ({correct:0, wrong:0, skip:0}));
+    saveStats(stats);
+    buildTeacherTable();
+    alert("Статистика сброшена ✅");
+  }
+
+  function exportCSV(){
+    stats = loadStats();
+    const lines = [];
+    lines.push(["№","Вопрос","Правильный ответ","Верно","Неверно","Пропуск"].join(";"));
+    questions.forEach((q, i) => {
+      const s = stats[i] || {correct:0, wrong:0, skip:0};
+      const row = [
+        String(i+1),
+        "${q.text.replace(/"/g,'""')}",
+        q.answer ? "Правда" : "Фейк",
+        String(s.correct),
+        String(s.wrong),
+        String(s.skip)
+      ];
+      lines.push(row.join(";"));
+    });
+
+    const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "internet_safety_stats.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  btnTeacher.addEventListener("click", openTeacher);
+  btnCloseModal.addEventListener("click", closeTeacher);
+  modalBack.addEventListener("click", (e) => { if (e.target === modalBack) closeTeacher(); });
+
+  btnPinOk.addEventListener("click", teacherLogin);
+  pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") teacherLogin(); });
+
+  btnResetStats.addEventListener("click", resetStats);
+  btnExport.addEventListener("click", exportCSV);
+
+  // ====== init ======
+  render();
+
+  // Поставим текущий адрес (может быть file://). Ты заменишь на https://... после публикации
+  qrUrl.value = window.location.href;
+  setTimeout(regenQR, 150);
+</script>
+</body>
+</html>
