@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="ru">
 <head>
@@ -15,7 +16,7 @@
     }
     *{box-sizing:border-box}
 
-    /* 🔥 ТЕМАТИЧЕСКИЙ КИБЕР-ФОН */
+    /* 🔥 ТЕМАТИЧЕСКИЙ КИБЕР-ФОН + “ДЫХАНИЕ” */
     body{
       margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -23,6 +24,8 @@
         radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,.25), transparent 60%),
         radial-gradient(800px 500px at 90% 20%, rgba(79,213,255,.18), transparent 60%),
         linear-gradient(180deg, #0b1024, #0f1221 60%, #0b1024);
+      background-size: 200% 200%;
+      animation: bgMove 25s ease infinite;
       color:var(--text);
       min-height:100vh;
       display:flex;
@@ -30,8 +33,13 @@
       justify-content:center;
       padding:18px;
     }
+    @keyframes bgMove{
+      0%{ background-position: 0% 50%; }
+      50%{ background-position: 100% 50%; }
+      100%{ background-position: 0% 50%; }
+    }
 
-    .app{ width:min(920px, 100%); }
+    .app{ width:min(980px, 100%); }
 
     header{
       display:flex;
@@ -181,6 +189,21 @@
     button.truth::before{ content:"✔ "; font-weight:900; }
     button.fake::before{ content:"✖ "; font-weight:900; }
 
+    /* ✅❌ ВИЗУАЛЬНАЯ РЕАКЦИЯ ПРИ ОТВЕТЕ */
+    .card.correct{ animation: flashGood .45s ease; }
+    .card.wrong{ animation: flashBad .45s ease; }
+
+    @keyframes flashGood{
+      0%{ box-shadow: 0 0 0 rgba(59,210,125,0); }
+      50%{ box-shadow: 0 0 30px rgba(59,210,125,.8); }
+      100%{ box-shadow: 0 0 0 rgba(59,210,125,0); }
+    }
+    @keyframes flashBad{
+      0%{ box-shadow: 0 0 0 rgba(255,92,122,0); }
+      50%{ box-shadow: 0 0 30px rgba(255,92,122,.8); }
+      100%{ box-shadow: 0 0 0 rgba(255,92,122,0); }
+    }
+
     .feedback{
       margin-top:12px;
       padding:12px 12px;
@@ -243,6 +266,29 @@
       border:1px solid rgba(255,255,255,.12);
       background: rgba(255,255,255,.05);
       font-weight:900;
+    }
+
+    /* Сертификат */
+    #certWrap{
+      display:none;
+      margin-top:14px;
+      text-align:center;
+    }
+    #certWrap.show{display:block}
+    #certCanvas{
+      width:min(900px, 100%);
+      height:auto;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 16px 60px rgba(0,0,0,.45);
+      background: rgba(0,0,0,.15);
+    }
+    .certBtns{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:10px;
     }
 
     /* TEACHER MODAL */
@@ -317,14 +363,33 @@
       </div>
     </header>
 
-    <div class="card" id="gameCard">
+    <!-- Экран ввода имени (один раз в начале) -->
+    <div class="card" id="nameCard">
+      <div class="qno">
+        <div><b>Введите имя участника</b></div>
+        <div id="qIcon" aria-hidden="true">🧑‍🎓</div>
+      </div>
+      <p class="question" style="margin-top:0">
+        Имя будет напечатано на сертификате в конце игры.
+      </p>
+      <div class="controls">
+        <input id="nameInput" type="text" placeholder="Например: Алия" style="max-width:340px">
+        <button class="primary" id="btnStart">Начать игру</button>
+      </div>
+      <div class="small" style="margin-top:10px">
+        Подсказка: можно написать имя и фамилию (например: «Айсулу Н.»).
+      </div>
+    </div>
+
+    <!-- Игра -->
+    <div class="card" id="gameCard" style="display:none;">
       <div class="progress" aria-label="Прогресс">
         <div class="bar" id="bar"></div>
       </div>
 
       <div class="qno">
         <div id="qno">Вопрос 1 из 10</div>
-        <div id="qIcon" aria-hidden="true">🔐</div>
+        <div id="qIconQ" aria-hidden="true">🔐</div>
       </div>
 
       <p class="question" id="question">Загрузка…</p>
@@ -355,15 +420,25 @@
       </div>
     </div>
 
+    <!-- Финальный экран -->
     <div class="card end" id="endCard" style="margin-top:14px;">
       <div class="end show">
         <div class="badge" id="resultBadge">Результат</div>
         <h2 style="margin:10px 0 6px 0;">Игра завершена!</h2>
         <p style="margin:0; color:var(--muted)">
-          Обсудите 2–3 вопроса, где чаще всего ошибались, и придумайте свои примеры фишинга/фейков.
+          Сертификат сформирован ниже — можно сохранить как картинку или распечатать.
         </p>
+
         <div class="controls" style="justify-content:center; margin-top:12px">
           <button class="primary" id="btnRestart">Сыграть ещё раз</button>
+        </div>
+
+        <div id="certWrap">
+          <canvas id="certCanvas" width="900" height="600"></canvas>
+          <div class="certBtns">
+            <button class="primary" id="btnDownloadCert">Скачать сертификат PNG</button>
+            <button id="btnPrintCert">Печать</button>
+          </div>
         </div>
       </div>
     </div>
@@ -409,9 +484,9 @@
 <script>
   // ====== TEACHER SETTINGS ======
   const TEACHER_PIN = "2026";                 // <- поменяй, если хочешь
-  const STATS_KEY = "safe_internet_stats_v3"; // статистика хранится на устройстве
+  const STATS_KEY = "safe_internet_stats_v4"; // статистика хранится на устройстве
 
-  // ====== ICONS for each question (делает игру “живой”) ======
+  // ====== ICONS for each question ======
   const icons = ["🔐","⚠️","🔎","🛡️","🧩","☎️","📱","📰","📸","🚫"];
 
   // ====== QUESTIONS (Theme 1: Safe Internet) ======
@@ -504,14 +579,35 @@
   let idx = 0;
   let score = 0;
   let locked = false;
+  let playerName = "";
 
   // ====== UI refs ======
+  const nameCard = $("nameCard");
+  const nameInput = $("nameInput");
+  const btnStart = $("btnStart");
+
+  const gameCard = $("gameCard");
+  const endCard = $("endCard");
+  const certWrap = $("certWrap");
+  const certCanvas = $("certCanvas");
+  const btnDownloadCert = $("btnDownloadCert");
+  const btnPrintCert = $("btnPrintCert");
+
   const statQ = $("statQ"), statScore = $("statScore"), qno = $("qno"), question = $("question"), bar = $("bar");
-  const qIcon = $("qIcon");
+  const qIconQ = $("qIconQ");
   const btnTruth = $("btnTruth"), btnFake = $("btnFake"), btnSkip = $("btnSkip"), btnNext = $("btnNext");
   const feedback = $("feedback"), fbLabel = $("fbLabel"), fbText = $("fbText");
   const hint = $("hint"), hintText = $("hintText");
-  const gameCard = $("gameCard"), endCard = $("endCard"), resultBadge = $("resultBadge"), btnRestart = $("btnRestart");
+  const resultBadge = $("resultBadge"), btnRestart = $("btnRestart");
+
+  function startGame(){
+    const n = (nameInput.value || "").trim();
+    playerName = n ? n : "Участник";
+    nameCard.style.display = "none";
+    gameCard.style.display = "block";
+    endCard.classList.remove("show");
+    render();
+  }
 
   function render(){
     const total = questions.length;
@@ -522,13 +618,15 @@
     question.textContent = q.text;
     bar.style.width = `${(idx / total) * 100}%`;
 
-    // icon for this question
-    qIcon.textContent = icons[idx] || "🔐";
+    qIconQ.textContent = icons[idx] || "🔐";
 
     feedback.className = "feedback";
     feedback.style.display = "none";
     hint.className = "hint";
     hintText.textContent = q.hint || "";
+
+    // снять эффекты
+    gameCard.classList.remove("correct","wrong");
 
     locked = false;
     btnTruth.disabled = false;
@@ -550,6 +648,10 @@
 
     const q = questions[idx];
     const correct = (userAns === q.answer);
+
+    // ✅❌ визуальная реакция
+    gameCard.classList.remove("correct","wrong");
+    gameCard.classList.add(correct ? "correct" : "wrong");
 
     if (correct) score += 1;
     statScore.textContent = String(score);
@@ -575,6 +677,8 @@
   function skip(){
     if (locked) return;
     locked = true;
+
+    gameCard.classList.remove("correct","wrong");
 
     stats[idx].skip += 1;
     saveStats(stats);
@@ -604,20 +708,31 @@
 
     const total = questions.length;
     const pct = Math.round((score / total) * 100);
-    let level = "Начальный";
-    if (pct >= 80) level = "Продвинутый";
-    else if (pct >= 60) level = "Уверенный";
 
-    resultBadge.textContent = `Результат: ${score}/${total} (${pct}%) • Уровень: ${level}`;
+    let level = "Новичок";
+    let title = "Кибер-ученик";
+    if (pct >= 80){ level = "Продвинутый"; title = "Кибер-защитник 🛡️"; }
+    else if (pct >= 60){ level = "Уверенный"; title = "Кибер-наблюдатель 👀"; }
+    else { level = "Начальный"; title = "Кибер-стажёр ⚠️"; }
+
+    resultBadge.textContent = `Результат: ${score}/${total} (${pct}%) • ${title}`;
+
+    // показать сертификат
+    certWrap.classList.add("show");
+    generateCertificate(playerName, title, `${score}/${total} (${pct}%)`);
   }
 
   function restart(){
     idx = 0;
     score = 0;
+    locked = false;
     statScore.textContent = "0";
+    certWrap.classList.remove("show");
     endCard.classList.remove("show");
-    gameCard.style.display = "block";
-    render();
+    gameCard.style.display = "none";
+    nameCard.style.display = "block";
+    nameInput.value = playerName === "Участник" ? "" : playerName;
+    nameInput.focus();
   }
 
   btnTruth.addEventListener("click", () => answer(true));
@@ -628,12 +743,111 @@
 
   document.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
-    if (gameCard.style.display !== "none"){
+    if (nameCard.style.display !== "none"){
+      if (k === "enter") startGame();
+    } else if (gameCard.style.display !== "none"){
       if (k === "t") answer(true);
       if (k === "f") answer(false);
       if (k === "n" && !btnNext.disabled) next();
     }
   });
+
+  btnStart.addEventListener("click", startGame);
+
+  // ====== CERTIFICATE (Canvas -> PNG) ======
+  function generateCertificate(name, title, resultText){
+    const c = certCanvas;
+    const ctx = c.getContext("2d");
+
+    // background
+    ctx.fillStyle = "#0f1221";
+    ctx.fillRect(0,0,c.width,c.height);
+
+    // gradients
+    const g1 = ctx.createRadialGradient(220,160,10,220,160,420);
+    g1.addColorStop(0,"rgba(124,92,255,.35)");
+    g1.addColorStop(1,"rgba(124,92,255,0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0,0,c.width,c.height);
+
+    const g2 = ctx.createRadialGradient(700,140,10,700,140,420);
+    g2.addColorStop(0,"rgba(79,213,255,.22)");
+    g2.addColorStop(1,"rgba(79,213,255,0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0,0,c.width,c.height);
+
+    // frame
+    ctx.strokeStyle = "#7c5cff";
+    ctx.lineWidth = 10;
+    ctx.strokeRect(24,24,c.width-48,c.height-48);
+
+    ctx.strokeStyle = "rgba(255,255,255,.18)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(44,44,c.width-88,c.height-88);
+
+    // header
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 52px Arial";
+    ctx.fillText("СЕРТИФИКАТ", c.width/2, 130);
+
+    ctx.fillStyle = "#b8bce6";
+    ctx.font = "22px Arial";
+    ctx.fillText("выдан за прохождение веб-игры", c.width/2, 175);
+    ctx.fillStyle = "#f2f4ff";
+    ctx.font = "bold 30px Arial";
+    ctx.fillText("«Безопасный интернет»", c.width/2, 215);
+
+    // name
+    ctx.fillStyle = "#b8bce6";
+    ctx.font = "22px Arial";
+    ctx.fillText("Участник:", c.width/2, 280);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 44px Arial";
+    ctx.fillText(name, c.width/2, 335);
+
+    // title
+    ctx.fillStyle = "#7c5cff";
+    ctx.font = "bold 30px Arial";
+    ctx.fillText(title, c.width/2, 390);
+
+    // result
+    ctx.fillStyle = "#b8bce6";
+    ctx.font = "20px Arial";
+    ctx.fillText(`Результат: ${resultText}`, c.width/2, 430);
+
+    // footer
+    const dt = new Date();
+    const dateText = dt.toLocaleDateString("ru-RU");
+    ctx.fillStyle = "rgba(242,244,255,.85)";
+    ctx.font = "18px Arial";
+    ctx.fillText(`Smart Bala • ${dateText}`, c.width/2, 510);
+
+    ctx.fillStyle = "rgba(184,188,230,.85)";
+    ctx.font = "16px Arial";
+    ctx.fillText("Школа: _______________________   Подпись: _______________________", c.width/2, 548);
+  }
+
+  function downloadCertificate(){
+    const url = certCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `certificate_${(playerName || "участник").replace(/\s+/g,"_")}.png`;
+    a.click();
+  }
+
+  function printCertificate(){
+    const dataUrl = certCanvas.toDataURL("image/png");
+    const w = window.open("");
+    w.document.write(`<img src="${dataUrl}" style="width:100%;max-width:1000px">`);
+    w.document.close();
+    w.focus();
+    w.print();
+  }
+
+  btnDownloadCert.addEventListener("click", downloadCertificate);
+  btnPrintCert.addEventListener("click", printCertificate);
 
   // ====== TEACHER MODE ======
   const btnTeacher = $("btnTeacher");
@@ -746,7 +960,9 @@
   btnExport.addEventListener("click", exportCSV);
 
   // ====== INIT ======
-  render();
+  // показать экран имени и фокус
+  nameInput.focus();
 </script>
 </body>
 </html>
+```
