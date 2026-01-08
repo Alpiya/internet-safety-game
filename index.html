@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="ru">
 <head>
@@ -7,7 +8,6 @@
   <style>
     :root{
       --bg:#0f1221;
-      --card:#171a2e;
       --text:#f2f4ff;
       --muted:#b8bce6;
       --accent:#7c5cff;
@@ -15,10 +15,15 @@
       --bad:#ff5c7a;
     }
     *{box-sizing:border-box}
+
+    /* 🔥 ТЕМАТИЧЕСКИЙ КИБЕР-ФОН */
     body{
       margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(1200px 600px at 20% 10%, #1a1f3f, var(--bg));
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(800px 500px at 90% 20%, rgba(79,213,255,.18), transparent 60%),
+        linear-gradient(180deg, #0b1024, #0f1221 60%, #0b1024);
       color:var(--text);
       min-height:100vh;
       display:flex;
@@ -26,7 +31,9 @@
       justify-content:center;
       padding:18px;
     }
+
     .app{ width:min(920px, 100%); }
+
     header{
       display:flex;
       gap:14px;
@@ -45,6 +52,7 @@
       color:var(--muted);
       font-size:14px;
     }
+
     .stats{
       display:flex;
       gap:10px;
@@ -67,12 +75,33 @@
     .pill strong{color:var(--text); font-weight:900}
 
     .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12);
       border-radius:16px;
       padding:18px;
       box-shadow: 0 14px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      animation: fadeIn .4s ease;
+      position:relative;
+      overflow:hidden;
     }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-40px;
+      background:
+        radial-gradient(420px 220px at 20% 20%, rgba(124,92,255,.12), transparent 60%),
+        radial-gradient(420px 220px at 80% 10%, rgba(79,213,255,.10), transparent 60%),
+        radial-gradient(420px 220px at 70% 80%, rgba(59,210,125,.08), transparent 60%);
+      pointer-events:none;
+    }
+    .card > *{ position:relative; }
+
+    @keyframes fadeIn{
+      from{opacity:0; transform:translateY(6px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+
     .progress{
       height:10px;
       background: rgba(255,255,255,.07);
@@ -87,25 +116,37 @@
       background: linear-gradient(90deg, var(--accent), #4fd5ff);
       transition: width .25s ease;
     }
+
     .qno{
       color:var(--muted);
       font-size:13px;
       margin-bottom:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
     }
+
+    /* Иконка вопроса */
+    #qIcon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:44px;
+      height:44px;
+      font-size:30px;
+      border-radius:14px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+    }
+
     .question{
       font-size:18px;
       line-height:1.35;
-      margin:0 0 14px 0;
+      margin:10px 0 14px 0;
     }
-    .hint{
-      color:var(--muted);
-      font-size:14px;
-      border-top:1px solid rgba(255,255,255,.09);
-      margin-top:14px;
-      padding-top:12px;
-      display:none;
-    }
-    .hint.show{display:block}
 
     .controls{
       display:flex;
@@ -122,19 +163,24 @@
       color:var(--text);
       background: rgba(255,255,255,.07);
       border:1px solid rgba(255,255,255,.12);
-      transition: transform .05s ease, background .2s ease, border .2s ease;
+      transition: transform .05s ease, background .2s ease, border .2s ease, filter .2s ease;
       user-select:none;
     }
+    button:hover{ filter: brightness(1.08); }
     button:active{transform: translateY(1px)}
     button.primary{
       background: linear-gradient(90deg, var(--accent), #4fd5ff);
       border-color: transparent;
       color: #0b0e1a;
     }
-    button.truth{background: rgba(59,210,125,.12); border-color: rgba(59,210,125,.35)}
-    button.fake{background: rgba(255,92,122,.12); border-color: rgba(255,92,122,.35)}
+    button.truth{background: rgba(59,210,125,.14); border-color: rgba(59,210,125,.35)}
+    button.fake{background: rgba(255,92,122,.14); border-color: rgba(255,92,122,.35)}
     button.warn{background: rgba(255,200,90,.10); border-color: rgba(255,200,90,.35)}
     button:disabled{opacity:.55; cursor:not-allowed}
+
+    /* Игровые маркеры на кнопках */
+    button.truth::before{ content:"✔ "; font-weight:900; }
+    button.fake::before{ content:"✖ "; font-weight:900; }
 
     .feedback{
       margin-top:12px;
@@ -151,6 +197,20 @@
       font-weight:900;
       margin-bottom:6px;
     }
+
+    /* Подсказка как “правило” */
+    .hint{
+      display:none;
+      margin-top:14px;
+      padding:12px;
+      border-radius:10px;
+      background: linear-gradient(90deg, rgba(124,92,255,.15), rgba(79,213,255,.12));
+      border-left:4px solid var(--accent);
+      color: rgba(242,244,255,.92);
+      font-size:14px;
+    }
+    .hint.show{display:block}
+    .hint strong{ color: rgba(242,244,255,.98); }
 
     .footer{
       margin-top:12px;
@@ -249,7 +309,7 @@
     <header>
       <div class="title">
         <h1>Веб-игра «Безопасный интернет»</h1>
-        <p>Тема 1 • 8–11 классы • QR ведёт на сайт игры (внутри QR нет)</p>
+        <p>Тема 1 • 8–11 классы • отвечай «Правда / Фейк»</p>
       </div>
       <div class="stats">
         <div class="pill">Вопрос: <strong id="statQ">1/10</strong></div>
@@ -263,7 +323,11 @@
         <div class="bar" id="bar"></div>
       </div>
 
-      <div class="qno" id="qno">Вопрос 1 из 10</div>
+      <div class="qno">
+        <div id="qno">Вопрос 1 из 10</div>
+        <div id="qIcon" aria-hidden="true">🔐</div>
+      </div>
+
       <p class="question" id="question">Загрузка…</p>
 
       <div class="controls">
@@ -346,7 +410,10 @@
 <script>
   // ====== TEACHER SETTINGS ======
   const TEACHER_PIN = "2026";                 // <- поменяй, если хочешь
-  const STATS_KEY = "safe_internet_stats_v2"; // статистика хранится на устройстве
+  const STATS_KEY = "safe_internet_stats_v3"; // статистика хранится на устройстве
+
+  // ====== ICONS for each question (делает игру “живой”) ======
+  const icons = ["🔐","⚠️","🔎","🛡️","🧩","☎️","📱","📰","📸","🚫"];
 
   // ====== QUESTIONS (Theme 1: Safe Internet) ======
   const questions = [
@@ -441,6 +508,7 @@
 
   // ====== UI refs ======
   const statQ = $("statQ"), statScore = $("statScore"), qno = $("qno"), question = $("question"), bar = $("bar");
+  const qIcon = $("qIcon");
   const btnTruth = $("btnTruth"), btnFake = $("btnFake"), btnSkip = $("btnSkip"), btnNext = $("btnNext");
   const feedback = $("feedback"), fbLabel = $("fbLabel"), fbText = $("fbText");
   const hint = $("hint"), hintText = $("hintText");
@@ -454,6 +522,9 @@
     qno.textContent = `Вопрос ${idx + 1} из ${total}`;
     question.textContent = q.text;
     bar.style.width = `${(idx / total) * 100}%`;
+
+    // icon for this question
+    qIcon.textContent = icons[idx] || "🔐";
 
     feedback.className = "feedback";
     feedback.style.display = "none";
@@ -680,3 +751,4 @@
 </script>
 </body>
 </html>
+```
